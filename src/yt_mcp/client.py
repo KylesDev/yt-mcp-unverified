@@ -54,6 +54,7 @@ class YouTrackClient:
                 "Accept": "application/json",
             },
             base_url=config.url,
+            verify=config.verify_ssl,
         )
 
     @property

@@ -9,6 +9,7 @@ class YouTrackConfig:
     read_only: bool = False
     disabled_tools: frozenset[str] = field(default_factory=frozenset)
     max_bulk_results: int = 100
+    verify_ssl: bool = True
 
 
 def _validate_url(url: str) -> str:
@@ -25,7 +26,7 @@ def _validate_url(url: str) -> str:
     return url
 
 
-def _parse_global_settings() -> tuple[bool, frozenset, int]:
+def _parse_global_settings() -> tuple[bool, frozenset, int, bool]:
     """Parse server-level settings shared across all instances."""
     read_only = os.environ.get("YOUTRACK_READ_ONLY", "").lower() in ("1", "true", "yes")
 
@@ -40,12 +41,18 @@ def _parse_global_settings() -> tuple[bool, frozenset, int]:
         max_bulk = int(os.environ.get("YOUTRACK_MAX_BULK_RESULTS", "100"))
     except ValueError:
         max_bulk = 100
-    return read_only, disabled, max_bulk
+
+    verify_ssl = os.environ.get("YOUTRACK_VERIFY_SSL", "true").lower() not in (
+        "0",
+        "false",
+        "no",
+    )
+    return read_only, disabled, max_bulk, verify_ssl
 
 
 def load_config() -> YouTrackConfig:
     url = _validate_url(os.environ.get("YOUTRACK_URL", "").rstrip("/"))
-    read_only, disabled, max_bulk = _parse_global_settings()
+    read_only, disabled, max_bulk, verify_ssl = _parse_global_settings()
 
     return YouTrackConfig(
         url=url,
@@ -53,7 +60,9 @@ def load_config() -> YouTrackConfig:
         read_only=read_only,
         disabled_tools=disabled,
         max_bulk_results=max_bulk,
+        verify_ssl=verify_ssl,
     )
+
 
 
 def load_all_configs() -> dict[str, YouTrackConfig]:
@@ -81,7 +90,7 @@ def load_all_configs() -> dict[str, YouTrackConfig]:
     if not instances:
         return {"default": load_config()}
 
-    read_only, disabled, max_bulk = _parse_global_settings()
+    read_only, disabled, max_bulk, verify_ssl = _parse_global_settings()
 
     configs: dict[str, YouTrackConfig] = {}
     for i, name in enumerate(instances):
@@ -102,6 +111,7 @@ def load_all_configs() -> dict[str, YouTrackConfig]:
             read_only=read_only,
             disabled_tools=disabled,
             max_bulk_results=max_bulk,
+            verify_ssl=verify_ssl,
         )
 
     return configs
